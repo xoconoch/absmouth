@@ -10,7 +10,7 @@ This tool requires the `muq_large_dynamo.onnx` acoustic embedding model (~1.2 GB
 
 ### Download the Model
 Download the ONNX model from the following URL:
-* **ONNX Model URL:** `[placeholder]`
+* **ONNX Model URL:** https://github.com/xoconoch/musicfm_onnx/releases/download/v0.0.1/muq_large_dynamo.onnx
 
 Place the downloaded file (`muq_large_dynamo.onnx`) in your working directory, or define the environment variable `MODEL_PATH` pointing to the downloaded file.
 
