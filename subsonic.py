@@ -56,36 +56,90 @@ class SubsonicClient:
             children = [children]
         return children
 
+    def get_artists(self):
+        sub_resp = self.request("getArtists.view")
+        artists_data = sub_resp.get("artists", {})
+        indices = artists_data.get("index", [])
+        if not isinstance(indices, list):
+            indices = [indices]
+        
+        all_artists = []
+        for index in indices:
+            artists = index.get("artist", [])
+            if not isinstance(artists, list):
+                artists = [artists]
+            all_artists.extend(artists)
+        return all_artists
+
+    def get_artist(self, artist_id):
+        sub_resp = self.request("getArtist.view", {"id": artist_id})
+        artist = sub_resp.get("artist", {})
+        if not artist:
+            return []
+        albums = artist.get("album", [])
+        if albums is None:
+            return []
+        if not isinstance(albums, list):
+            albums = [albums]
+        return albums
+
+    def get_album(self, album_id):
+        sub_resp = self.request("getAlbum.view", {"id": album_id})
+        album = sub_resp.get("album", {})
+        if not album:
+            return []
+        songs = album.get("song", [])
+        if songs is None:
+            return []
+        if not isinstance(songs, list):
+            songs = [songs]
+        return songs
+
     def crawl_all_tracks(self):
-        """Recursively walks through Subsonic folders to build a list of all audio files."""
-        print("Crawling Subsonic directory structure...")
+        """Crawls all tracks from Subsonic using the metadata structure (Artist -> Album -> Track)."""
+        print("Crawling Subsonic metadata structure (Artist -> Album -> Track)...")
         try:
-            folders = self.get_music_folders()
+            artists = self.get_artists()
         except Exception as e:
-            print(f"Error fetching music folders from Subsonic: {e}")
+            print(f"Error fetching artists from Subsonic: {e}")
             return []
 
         all_tracks = []
-        visited_dirs = set()
+        total_artists = len(artists)
+        print(f"Found {total_artists} artists to process.")
 
-        def crawl(dir_id):
-            if dir_id in visited_dirs:
-                return
-            visited_dirs.add(dir_id)
+        for a_idx, artist in enumerate(artists, 1):
+            artist_id = artist.get("id")
+            artist_name = artist.get("name", "Unknown Artist")
+            if not artist_id:
+                continue
+
+            print(f"[{a_idx}/{total_artists}] Crawling artist: {artist_name}")
             try:
-                children = self.get_music_directory(dir_id)
-                for child in children:
-                    if child.get("isDir", False):
-                        crawl(child.get("id"))
-                    else:
-                        all_tracks.append(child)
+                albums = self.get_artist(artist_id)
+                for album in albums:
+                    album_id = album.get("id")
+                    album_name = album.get("name", "Unknown Album")
+                    if not album_id:
+                        continue
+
+                    try:
+                        songs = self.get_album(album_id)
+                        for song in songs:
+                            # Enrich song metadata if some standard fields are missing
+                            if "artist" not in song and artist_name:
+                                song["artist"] = artist_name
+                            if "artistId" not in song and artist_id:
+                                song["artistId"] = artist_id
+                            if "album" not in song and album_name:
+                                song["album"] = album_name
+                            all_tracks.append(song)
+                    except Exception as e:
+                        print(f"  Warning: Failed to crawl album {album_name} ({album_id}): {e}")
             except Exception as e:
-                print(f"Warning: Failed to crawl directory {dir_id}: {e}")
+                print(f"Warning: Failed to crawl artist {artist_name} ({artist_id}): {e}")
 
-        for folder in folders:
-            crawl(folder.get("id"))
-
-        print(f"Crawling complete. Found {len(all_tracks)} total songs/files.")
+        print(f"Crawling complete. Found {len(all_tracks)} total songs/tracks.")
         return all_tracks
 
     def download_track(self, track_id, dest_path):

@@ -31,7 +31,7 @@ class Config:
     SUBSONIC_CLIENT_NAME = os.environ.get("SUBSONIC_CLIENT_NAME", "AbsolutePitchClient")
 
     # Absolute Pitch target API
-    API_URL = os.environ.get("API_URL", "http://localhost:8000/tracks")
+    API_URL = os.environ.get("API_URL", "http://localhost:8100/tracks")
 
     # ONNX Model parameters
     MODEL_PATH = os.environ.get("MODEL_PATH", "muq_large_dynamo.onnx")
