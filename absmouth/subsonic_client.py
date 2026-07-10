@@ -7,11 +7,11 @@ Entrypoint script that coordinates the synchronization loop.
 import os
 import sys
 
-from config import Config
-from db import CheckpointManager, ChunkCache, get_stable_id
-from subsonic import SubsonicClient
-from abspitch import AbsolutePitchClient
-from model import ModelSessionManager, EmbeddingEngine
+from .config import Config
+from .db import CheckpointManager, ChunkCache, get_stable_id
+from .subsonic import SubsonicClient
+from .abspitch import AbsolutePitchClient
+from .model import ModelSessionManager, EmbeddingEngine
 
 def main():
     Config.validate()

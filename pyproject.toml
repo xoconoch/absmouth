@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=61.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "absmouth"
+version = "0.1.0"
+description = "Absolute Pitch Subsonic Sync Client"
+readme = "README.md"
+requires-python = ">=3.8"
+license = { text = "MIT" }
+dependencies = [
+    "requests",
+    "numpy",
+    "librosa",
+    "onnxruntime",
+]
+
+[project.scripts]
+absmouth = "absmouth.subsonic_client:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["absmouth*"]
