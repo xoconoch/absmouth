@@ -1,0 +1,21 @@
+# Python artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# Local configuration
+.env
+
+# Model cache & artifacts
+ov_cache/
+muq_large_dynamo.onnx
+
+# Temporary audio files
+tmp_audio/
+
+# Local databases and client tracking
+checkpoint.json
+chunk_cache.db
+test_chunk_cache.db
+test_checkpoint.json
