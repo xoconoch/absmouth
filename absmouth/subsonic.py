@@ -95,52 +95,6 @@ class SubsonicClient:
             songs = [songs]
         return songs
 
-    def crawl_all_tracks(self):
-        """Crawls all tracks from Subsonic using the metadata structure (Artist -> Album -> Track)."""
-        print("Crawling Subsonic metadata structure (Artist -> Album -> Track)...")
-        try:
-            artists = self.get_artists()
-        except Exception as e:
-            print(f"Error fetching artists from Subsonic: {e}")
-            return []
-
-        all_tracks = []
-        total_artists = len(artists)
-        print(f"Found {total_artists} artists to process.")
-
-        for a_idx, artist in enumerate(artists, 1):
-            artist_id = artist.get("id")
-            artist_name = artist.get("name", "Unknown Artist")
-            if not artist_id:
-                continue
-
-            print(f"[{a_idx}/{total_artists}] Crawling artist: {artist_name}")
-            try:
-                albums = self.get_artist(artist_id)
-                for album in albums:
-                    album_id = album.get("id")
-                    album_name = album.get("name", "Unknown Album")
-                    if not album_id:
-                        continue
-
-                    try:
-                        songs = self.get_album(album_id)
-                        for song in songs:
-                            # Enrich song metadata if some standard fields are missing
-                            if "artist" not in song and artist_name:
-                                song["artist"] = artist_name
-                            if "artistId" not in song and artist_id:
-                                song["artistId"] = artist_id
-                            if "album" not in song and album_name:
-                                song["album"] = album_name
-                            all_tracks.append(song)
-                    except Exception as e:
-                        print(f"  Warning: Failed to crawl album {album_name} ({album_id}): {e}")
-            except Exception as e:
-                print(f"Warning: Failed to crawl artist {artist_name} ({artist_id}): {e}")
-
-        print(f"Crawling complete. Found {len(all_tracks)} total songs/tracks.")
-        return all_tracks
 
     def download_track(self, track_id, dest_path):
         """Streams track download directly to disk to preserve memory usage."""
