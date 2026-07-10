@@ -80,6 +80,36 @@ python -m absmouth.subsonic_client
 nix develop --command python -m absmouth.subsonic_client
 ```
 
+### Running via Docker
+
+You can run the sync client using Docker. Because the client needs to cache chunk embeddings, track checkpoints, and load the ONNX model, you should mount these files from your host.
+
+#### CPU-only Image
+Run the sync client using the CPU-only image:
+```bash
+docker run --rm \
+  --network="host" \
+  --env-file .env \
+  -v ./muq_large_dynamo.onnx:/app/muq_large_dynamo.onnx \
+  -v ./chunk_cache.db:/app/chunk_cache.db \
+  -v ./checkpoint.json:/app/checkpoint.json \
+  ghcr.io/xoconoch/absmouth:latest
+```
+
+#### OpenVINO Accelerated Image (Intel GPU)
+Run the sync client with Intel GPU hardware acceleration by sharing the `/dev/dri` device and mounting the OpenVINO model cache folder:
+```bash
+docker run --rm \
+  --network="host" \
+  --env-file .env \
+  --device /dev/dri \
+  -v ./muq_large_dynamo.onnx:/app/muq_large_dynamo.onnx \
+  -v ./chunk_cache.db:/app/chunk_cache.db \
+  -v ./checkpoint.json:/app/checkpoint.json \
+  -v ./ov_cache:/app/ov_cache \
+  ghcr.io/xoconoch/absmouth:openvino
+```
+
 ### Override Execution Settings
 You can override configuration settings on-the-fly using environment variables:
 * **Force Refetch Tracklist**: Force re-indexing metadata from Subsonic instead of using `checkpoint.json`.
