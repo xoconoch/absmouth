@@ -82,7 +82,14 @@ nix develop --command python -m absmouth.subsonic_client
 
 ### Running via Docker
 
-You can run the sync client using Docker. Because the client needs to cache chunk embeddings, track checkpoints, and load the ONNX model, you should mount these files from your host.
+You can run the sync client using Docker. All operational files (the downloaded ONNX model, the chunk cache database, track checkpoints, and OpenVINO caches) live under the `data/` directory. You only need to mount this single directory to run the client.
+
+Ensure your downloaded model `muq_large_dynamo.onnx` is placed inside the host's `./data` directory before running:
+```bash
+# Example local directory structure:
+# ./data/
+# └── muq_large_dynamo.onnx
+```
 
 #### CPU-only Image
 Run the sync client using the CPU-only image:
@@ -90,23 +97,18 @@ Run the sync client using the CPU-only image:
 docker run --rm \
   --network="host" \
   --env-file .env \
-  -v ./muq_large_dynamo.onnx:/app/muq_large_dynamo.onnx \
-  -v ./chunk_cache.db:/app/chunk_cache.db \
-  -v ./checkpoint.json:/app/checkpoint.json \
+  -v ./data:/app/data \
   ghcr.io/xoconoch/absmouth:latest
 ```
 
 #### OpenVINO Accelerated Image (Intel GPU)
-Run the sync client with Intel GPU hardware acceleration by sharing the `/dev/dri` device and mounting the OpenVINO model cache folder:
+Run the sync client with Intel GPU hardware acceleration by sharing the `/dev/dri` device and mounting the unified `data` folder:
 ```bash
 docker run --rm \
   --network="host" \
   --env-file .env \
   --device /dev/dri \
-  -v ./muq_large_dynamo.onnx:/app/muq_large_dynamo.onnx \
-  -v ./chunk_cache.db:/app/chunk_cache.db \
-  -v ./checkpoint.json:/app/checkpoint.json \
-  -v ./ov_cache:/app/ov_cache \
+  -v ./data:/app/data \
   ghcr.io/xoconoch/absmouth:openvino
 ```
 

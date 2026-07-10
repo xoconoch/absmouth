@@ -24,6 +24,12 @@ def main():
     print(f"Chunk Cache: {Config.CHUNK_CACHE_DB}")
     print(f"Checkpoint File: {Config.CHECKPOINT_FILE}")
 
+    # Ensure parent directories exist for cache and checkpoint storage
+    for path in [Config.CHUNK_CACHE_DB, Config.CHECKPOINT_FILE]:
+        dir_name = os.path.dirname(path)
+        if dir_name:
+            os.makedirs(dir_name, exist_ok=True)
+
     # Set up workspace-confined temporary directory for downloaded audio streams
     temp_dir = os.path.join(os.getcwd(), "tmp_audio")
     os.makedirs(temp_dir, exist_ok=True)

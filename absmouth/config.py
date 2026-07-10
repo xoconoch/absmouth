@@ -34,7 +34,7 @@ class Config:
     API_URL = os.environ.get("API_URL", "http://localhost:8100/tracks")
 
     # ONNX Model parameters
-    MODEL_PATH = os.environ.get("MODEL_PATH", "muq_large_dynamo.onnx")
+    MODEL_PATH = os.environ.get("MODEL_PATH", "data/muq_large_dynamo.onnx")
     
     # Primary Execution Provider (Hardware Acceleration)
     PRIMARY_PROVIDER = os.environ.get("PRIMARY_PROVIDER", "OpenVINOExecutionProvider")
@@ -48,8 +48,8 @@ class Config:
     CPU_FALLBACK_TTL = int(os.environ.get("CPU_FALLBACK_TTL", "300"))
 
     # Local storage configurations
-    CHUNK_CACHE_DB = os.environ.get("CHUNK_CACHE_DB", "chunk_cache.db")
-    CHECKPOINT_FILE = os.environ.get("CHECKPOINT_FILE", "checkpoint.json")
+    CHUNK_CACHE_DB = os.environ.get("CHUNK_CACHE_DB", "data/chunk_cache.db")
+    CHECKPOINT_FILE = os.environ.get("CHECKPOINT_FILE", "data/checkpoint.json")
     
     # Processing controls
     FORCE_REFETCH_TRACKLIST = os.environ.get("FORCE_REFETCH_TRACKLIST", "false").lower() in ("true", "1", "yes")
@@ -71,7 +71,7 @@ class Config:
             return {
                 "device_type": "GPU",
                 "precision": "FP32",
-                "cache_dir": "./ov_cache"
+                "cache_dir": "data/ov_cache"
             }
         return {}
 
