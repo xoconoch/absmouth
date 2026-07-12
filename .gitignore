@@ -19,3 +19,5 @@ checkpoint.json
 chunk_cache.db
 test_chunk_cache.db
 test_checkpoint.json
+
+data/
