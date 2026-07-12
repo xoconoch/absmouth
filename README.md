@@ -6,39 +6,21 @@
 
 ## 1. Prerequisites & Model Setup
 
-This tool requires the `muq_large_dynamo.onnx` acoustic embedding model (~1.2 GB).
+The only supported way to run `absmouth` is via **Docker**.
 
-### Download the Model
-Download the ONNX model from the following URL:
-* **ONNX Model URL:** https://github.com/xoconoch/musicfm_onnx/releases/download/v0.0.1/muq_large_dynamo.onnx
+This tool requires the `muq_v0.0.1.onnx` acoustic embedding model (~1.2 GB).
 
-Place the downloaded file (`muq_large_dynamo.onnx`) in your working directory, or define the environment variable `MODEL_PATH` pointing to the downloaded file.
+### Automatic or Manual Model Setup
+By default, **the client automatically downloads the model** if it is not detected at the configured path inside the mounted data volume.
 
----
+If you prefer to download it manually:
+* **ONNX Model URL:** https://github.com/xoconoch/muq_onnx/releases/download/v0.0.1/muq_v0.0.1.onnx
 
-## 2. Installation
-
-You can run `absmouth` either in a development shell, via Nix, or by installing the package directly using standard Python tools.
-
-### Option A: Nix Development Environment (Recommended)
-If you are using Nix, you can enter the development shell which comes preconfigured with Python 3, ONNX Runtime (with OpenVINO acceleration support), `librosa`, and other required libraries:
-```bash
-nix develop
-```
-
-### Option B: Standard Python Package Installation
-To install the package into your Python environment:
-```bash
-# Standard installation
-pip install .
-
-# Or for local development/editable mode:
-pip install -e .
-```
+Place the downloaded file (`muq_v0.0.1.onnx`) inside your host's `./data` directory (so that it is available inside the container as `data/muq_v0.0.1.onnx`).
 
 ---
 
-## 3. Configuration
+## 2. Configuration
 
 Configure the application by creating a `.env` file in your working directory:
 
@@ -51,8 +33,8 @@ SUBSONIC_PASS="your_subsonic_password"
 # Absolute Pitch Target API Endpoint
 API_URL="http://localhost:8100/tracks"
 
-# ONNX Model Path (defaults to 'muq_large_dynamo.onnx' in the current working directory)
-MODEL_PATH="muq_large_dynamo.onnx"
+# ONNX Model Path (defaults to 'data/muq_v0.0.1.onnx')
+MODEL_PATH="data/muq_v0.0.1.onnx"
 
 # Hardware Acceleration / Execution Providers
 PRIMARY_PROVIDER="OpenVINOExecutionProvider"
@@ -62,36 +44,18 @@ CPU_FALLBACK_TTL=300
 
 ---
 
-## 4. Running the Client
-
-Once installed or inside the Nix development shell, you can run the client in one of the following ways:
-
-### Executing the CLI Command (if installed via pip)
-```bash
-absmouth
-```
-
-### Running as a Python Module
-```bash
-# Direct python execution
-python -m absmouth.subsonic_client
-
-# Inside the Nix shell without entering it first
-nix develop --command python -m absmouth.subsonic_client
-```
-
-### Running via Docker
+## 3. Running the Client
 
 You can run the sync client using Docker. All operational files (the downloaded ONNX model, the chunk cache database, track checkpoints, and OpenVINO caches) live under the `data/` directory. You only need to mount this single directory to run the client.
 
-Ensure your downloaded model `muq_large_dynamo.onnx` is placed inside the host's `./data` directory before running:
+Ensure your `./data` directory is prepared (it can be empty, in which case the container will download the model automatically on startup):
 ```bash
 # Example local directory structure:
 # ./data/
-# └── muq_large_dynamo.onnx
+# └── (muq_v0.0.1.onnx will be downloaded here if not present)
 ```
 
-#### CPU-only Image
+### CPU-only Image
 Run the sync client using the CPU-only image:
 ```bash
 docker run --rm \
@@ -101,7 +65,7 @@ docker run --rm \
   ghcr.io/xoconoch/absmouth:latest
 ```
 
-#### OpenVINO Accelerated Image (Intel GPU)
+### OpenVINO Accelerated Image (Intel GPU)
 Run the sync client with Intel GPU hardware acceleration by sharing the `/dev/dri` device and mounting the unified `data` folder:
 ```bash
 docker run --rm \
@@ -113,12 +77,22 @@ docker run --rm \
 ```
 
 ### Override Execution Settings
-You can override configuration settings on-the-fly using environment variables:
+You can override configuration settings on-the-fly using environment variables via the `-e` flag in your `docker run` command:
 * **Force Refetch Tracklist**: Force re-indexing metadata from Subsonic instead of using `checkpoint.json`.
   ```bash
-  FORCE_REFETCH_TRACKLIST=true absmouth
+  docker run --rm \
+    --network="host" \
+    --env-file .env \
+    -e FORCE_REFETCH_TRACKLIST=true \
+    -v ./data:/app/data \
+    ghcr.io/xoconoch/absmouth:latest
   ```
 * **Force Reprocess All**: Reprocess and re-generate embeddings for all tracks even if already synced.
   ```bash
-  FORCE_REPROCESS_ALL=true absmouth
+  docker run --rm \
+    --network="host" \
+    --env-file .env \
+    -e FORCE_REPROCESS_ALL=true \
+    -v ./data:/app/data \
+    ghcr.io/xoconoch/absmouth:latest
   ```

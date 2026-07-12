@@ -12,6 +12,66 @@ class ModelSessionManager:
         self.primary_session = None
         self.cpu_session = None
         self.cpu_last_used = 0.0
+        self._ensure_model_exists()
+
+    def _ensure_model_exists(self):
+        import os
+        import urllib.request
+
+        if os.path.exists(self.model_path):
+            return
+
+        url = self.config.MODEL_DOWNLOAD_URL
+        print(f"Model not found at {self.model_path}. Automatically downloading from {url}...")
+        
+        # Ensure parent directories exist
+        dir_name = os.path.dirname(self.model_path)
+        if dir_name:
+            os.makedirs(dir_name, exist_ok=True)
+            
+        temp_target_path = self.model_path + ".tmp"
+        try:
+            req = urllib.request.Request(
+                url, 
+                headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
+            )
+            with urllib.request.urlopen(req) as response, open(temp_target_path, "wb") as out_file:
+                meta = response.info()
+                content_length = meta.get("Content-Length")
+                file_size = int(content_length) if content_length else None
+                
+                downloaded = 0
+                block_size = 65536
+                last_percentage = -1
+                
+                while True:
+                    buffer = response.read(block_size)
+                    if not buffer:
+                        break
+                    downloaded += len(buffer)
+                    out_file.write(buffer)
+                    
+                    if file_size:
+                        percentage = int(downloaded * 100 / file_size)
+                        if percentage != last_percentage:
+                            if percentage % 5 == 0:
+                                print(f"Downloading: {percentage}% ({downloaded / (1024*1024):.1f} MB / {file_size / (1024*1024):.1f} MB)", end="\r", flush=True)
+                                last_percentage = percentage
+                    else:
+                        if downloaded % (1024 * 1024 * 5) == 0:
+                            print(f"Downloaded {downloaded / (1024*1024):.1f} MB...", end="\r", flush=True)
+                print()  # Newline after progress indicators
+                
+            os.replace(temp_target_path, self.model_path)
+            print(f"Model downloaded successfully and saved to {self.model_path}")
+        except Exception as e:
+            if os.path.exists(temp_target_path):
+                try:
+                    os.remove(temp_target_path)
+                except Exception:
+                    pass
+            print(f"CRITICAL: Failed to download model: {e}")
+            raise e
 
     def get_primary_session(self):
         if self.primary_session is None:

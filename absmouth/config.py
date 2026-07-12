@@ -34,7 +34,8 @@ class Config:
     API_URL = os.environ.get("API_URL", "http://localhost:8100/tracks")
 
     # ONNX Model parameters
-    MODEL_PATH = os.environ.get("MODEL_PATH", "data/muq_large_dynamo.onnx")
+    MODEL_PATH = os.environ.get("MODEL_PATH", "data/muq_v0.0.1.onnx")
+    MODEL_DOWNLOAD_URL = os.environ.get("MODEL_DOWNLOAD_URL", "https://github.com/xoconoch/muq_onnx/releases/download/v0.0.1/muq_v0.0.1.onnx")
     
     # Primary Execution Provider (Hardware Acceleration)
     PRIMARY_PROVIDER = os.environ.get("PRIMARY_PROVIDER", "OpenVINOExecutionProvider")
