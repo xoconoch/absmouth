@@ -1,6 +1,9 @@
 # Absolute Pitch Subsonic Sync Client (absmouth)
 
-`absmouth` is a lightweight, robust client that recursively crawls a Subsonic/OpenSubsonic server library, processes audio tracks in 10-second chunks, generates 1024-dimensional acoustic embeddings via ONNX Runtime, and synchronizes them with the Absolute Pitch vector database backend.
+`absmouth` is an [abspitch](https://github.com/xoconoch/abspitch) client that
+recursively crawls a Subsonic/OpenSubsonic server library, processes audio
+tracks in 10-second chunks, generates 1024-dimensional acoustic embeddings, and
+pushes them to the API.
 
 ---
 
@@ -9,6 +12,8 @@
 The only supported way to run `absmouth` is via **Docker**.
 
 This tool requires the `muq_v0.0.1.onnx` acoustic embedding model (~1.2 GB).
+Support for other models should be possible as long as they generate embeddings
+of the same dimension, but I am haven't explored that possibility.
 
 ### Automatic or Manual Model Setup
 By default, **the client automatically downloads the model** if it is not detected at the configured path inside the mounted data volume.
