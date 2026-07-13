@@ -2,7 +2,6 @@ import os
 import json
 import sys
 
-# Helper to load .env file if it exists in the workspace
 def load_dotenv(dotenv_path=".env"):
     if os.path.exists(dotenv_path):
         with open(dotenv_path, "r", encoding="utf-8") as f:
@@ -14,7 +13,6 @@ def load_dotenv(dotenv_path=".env"):
                     key, val = line.split("=", 1)
                     key = key.strip()
                     val = val.strip()
-                    # Remove surrounding quotes if present
                     if val.startswith(('"', "'")) and val.endswith(val[0]):
                         val = val[1:-1]
                     if key not in os.environ:
@@ -23,40 +21,31 @@ def load_dotenv(dotenv_path=".env"):
 load_dotenv()
 
 class Config:
-    # Subsonic connection parameters
     SUBSONIC_URL = os.environ.get("SUBSONIC_URL", "http://localhost:4040")
     SUBSONIC_USER = os.environ.get("SUBSONIC_USER", "")
     SUBSONIC_PASS = os.environ.get("SUBSONIC_PASS", "")
     SUBSONIC_API_VERSION = os.environ.get("SUBSONIC_API_VERSION", "1.16.1")
     SUBSONIC_CLIENT_NAME = os.environ.get("SUBSONIC_CLIENT_NAME", "AbsolutePitchClient")
 
-    # Absolute Pitch target API
     API_URL = os.environ.get("API_URL", "http://localhost:8100/tracks")
 
-    # ONNX Model parameters
     MODEL_PATH = os.environ.get("MODEL_PATH", "data/muq_v0.0.1.onnx")
     MODEL_DOWNLOAD_URL = os.environ.get("MODEL_DOWNLOAD_URL", "https://github.com/xoconoch/muq_onnx/releases/download/v0.0.1/muq_v0.0.1.onnx")
     
-    # Primary Execution Provider (Hardware Acceleration)
     PRIMARY_PROVIDER = os.environ.get("PRIMARY_PROVIDER", "OpenVINOExecutionProvider")
     PRIMARY_PROVIDER_OPTIONS_RAW = os.environ.get("PRIMARY_PROVIDER_OPTIONS", "")
     
-    # Fallback Execution Provider (usually CPU)
     CPU_PROVIDER = os.environ.get("CPU_PROVIDER", "CPUExecutionProvider")
     CPU_PROVIDER_OPTIONS_RAW = os.environ.get("CPU_PROVIDER_OPTIONS", "")
     
-    # Time-to-live for CPU session in seconds.
     CPU_FALLBACK_TTL = int(os.environ.get("CPU_FALLBACK_TTL", "300"))
 
-    # Local storage configurations
     CHUNK_CACHE_DB = os.environ.get("CHUNK_CACHE_DB", "data/chunk_cache.db")
     CHECKPOINT_FILE = os.environ.get("CHECKPOINT_FILE", "data/checkpoint.json")
     
-    # Processing controls
     FORCE_REFETCH_TRACKLIST = os.environ.get("FORCE_REFETCH_TRACKLIST", "false").lower() in ("true", "1", "yes")
     FORCE_REPROCESS_ALL = os.environ.get("FORCE_REPROCESS_ALL", "false").lower() in ("true", "1", "yes")
 
-    # Audio preprocessing parameters
     TARGET_SAMPLE_RATE = int(os.environ.get("TARGET_SAMPLE_RATE", "24000"))
     CHUNK_DURATION = int(os.environ.get("CHUNK_DURATION", "10"))
 

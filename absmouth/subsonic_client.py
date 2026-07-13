@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Absolute Pitch Subsonic Sync Client
 Entrypoint script that coordinates the synchronization loop.
@@ -24,18 +23,15 @@ def main():
     print(f"Chunk Cache: {Config.CHUNK_CACHE_DB}")
     print(f"Checkpoint File: {Config.CHECKPOINT_FILE}")
 
-    # Ensure parent directories exist for cache and checkpoint storage
     for path in [Config.CHUNK_CACHE_DB, Config.CHECKPOINT_FILE]:
         dir_name = os.path.dirname(path)
         if dir_name:
             os.makedirs(dir_name, exist_ok=True)
 
-    # Set up workspace-confined temporary directory for downloaded audio streams
     temp_dir = os.path.join(os.getcwd(), "tmp_audio")
     os.makedirs(temp_dir, exist_ok=True)
     print(f"Temporary audio directory: {temp_dir}")
 
-    # Initialize components
     subsonic = SubsonicClient(Config)
     abspitch = AbsolutePitchClient(Config)
     checkpoint = CheckpointManager(Config.CHECKPOINT_FILE)
@@ -43,7 +39,6 @@ def main():
     model_manager = ModelSessionManager(Config)
     engine = EmbeddingEngine(Config, model_manager, chunk_cache)
 
-    # Resolve tracklist
     print("Fetching list of artists from Subsonic...")
     try:
         artists = subsonic.get_artists()
@@ -73,14 +68,12 @@ def main():
 
             print(f"\n[{a_idx}/{total_artists}] Crawling artist: {artist_name}")
             
-            # Fetch albums for this artist
             try:
                 albums = subsonic.get_artist(artist_id)
             except Exception as e:
                 print(f"  Warning: Failed to fetch albums for artist {artist_name}: {e}")
                 continue
 
-            # Crawl tracks for each album
             artist_songs = []
             for album in albums:
                 album_id = album.get("id")
@@ -100,7 +93,6 @@ def main():
                 except Exception as e:
                     print(f"  Warning: Failed to crawl album {album_name} ({album_id}): {e}")
 
-            # Filter tracks
             songs_to_process = [s for s in artist_songs if str(s.get("id")) not in completed_ids]
             
             if not songs_to_process:
@@ -118,19 +110,15 @@ def main():
                 temp_file_path = os.path.join(temp_dir, f"track_{track_id}.tmp")
                 
                 try:
-                    # 1. Download file
                     print("    Downloading audio stream...")
                     subsonic.download_track(track_id, temp_file_path)
                     
-                    # 2. Preprocess audio
                     print("    Preprocessing audio...")
                     audio_data = engine.load_and_preprocess_audio(temp_file_path)
                     
-                    # 3. Generate embedding (with automatic lazy fallback to CPU)
                     print("    Running ONNX model inference...")
                     embedding = engine.compute_embedding(audio_data)
                     
-                    # 4. Push to REST API
                     print("    Pushing to Absolute Pitch API...")
                     response = abspitch.insert_track(
                         subsonic_id=track_id,
@@ -157,27 +145,23 @@ def main():
                     failure_count += 1
                     print(f"    [Failed] Error processing file: {e}")
                 finally:
-                    # Cleanup audio files to ensure workspace directories don't bloat
                     if os.path.exists(temp_file_path):
                         try:
                             os.remove(temp_file_path)
                         except Exception as e:
                             print(f"    [Warning] Clean-up failed for {temp_file_path}: {e}")
                     
-                    # Check CPU model session TTL to free memory
                     model_manager.check_cpu_ttl()
 
     except KeyboardInterrupt:
         pass
     finally:
-        # Cleanup temporary files folder
         if os.path.exists(temp_dir) and not os.listdir(temp_dir):
             try:
                 os.rmdir(temp_dir)
             except Exception:
                 pass
         
-        # Release model resources
         model_manager.close_all()
         print(f"\nSync complete. Successes: {success_count}, Failures: {failure_count}.")
 

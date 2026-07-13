@@ -24,7 +24,6 @@ class ModelSessionManager:
         url = self.config.MODEL_DOWNLOAD_URL
         print(f"Model not found at {self.model_path}. Automatically downloading from {url}...")
         
-        # Ensure parent directories exist
         dir_name = os.path.dirname(self.model_path)
         if dir_name:
             os.makedirs(dir_name, exist_ok=True)
@@ -60,7 +59,7 @@ class ModelSessionManager:
                     else:
                         if downloaded % (1024 * 1024 * 5) == 0:
                             print(f"Downloaded {downloaded / (1024*1024):.1f} MB...", end="\r", flush=True)
-                print()  # Newline after progress indicators
+                print()  
                 
             os.replace(temp_target_path, self.model_path)
             print(f"Model downloaded successfully and saved to {self.model_path}")
@@ -153,16 +152,13 @@ class EmbeddingEngine:
         for i in range(0, total_samples, chunk_size):
             chunk = audio_data[:, i:i+chunk_size]
             
-            # Pad final chunk if short
             if chunk.shape[1] < chunk_size:
                 padding_needed = chunk_size - chunk.shape[1]
                 chunk = np.pad(chunk, ((0, 0), (0, padding_needed)), mode='constant')
             
-            # Compute chunk hash for lookup
             chunk_bytes = chunk.tobytes()
             chunk_hash = hashlib.sha256(chunk_bytes).hexdigest()
             
-            # Check persistent chunk cache
             cached_emb = self.chunk_cache.get(chunk_hash)
             if cached_emb is not None:
                 cached_emb_arr = np.array(cached_emb, dtype=np.float32)
@@ -172,34 +168,27 @@ class EmbeddingEngine:
                 else:
                     print("  [Warning] Cached chunk embedding had NaNs; recomputing.")
 
-            # Run model execution
             outputs = session.run(None, {input_name: chunk})
             last_hidden_state = outputs[0]
             
-            # --- NAN DETECTION (Model output level) ---
             if np.isnan(last_hidden_state).any():
                 print("  [Warning] NaN found in raw inference outputs.")
                 return None
                 
-            # Average pooling along time dim (axis 1)
             chunk_emb = np.mean(last_hidden_state, axis=1).flatten()
             
-            # --- NAN DETECTION (Pooled embedding level) ---
             if np.isnan(chunk_emb).any():
                 print("  [Warning] NaN found in pooled chunk embedding.")
                 return None
 
-            # Cache successful chunk embedding
             self.chunk_cache.set(chunk_hash, chunk_emb.tolist())
             chunk_embeddings.append(chunk_emb)
             
         if not chunk_embeddings:
             return None
             
-        # Average embeddings across all chunks
         mean_embedding = np.mean(chunk_embeddings, axis=0)
         
-        # --- NAN DETECTION (Aggregated final level) ---
         if np.isnan(mean_embedding).any():
             print("  [Warning] NaN found in final aggregated embedding.")
             return None
@@ -208,11 +197,9 @@ class EmbeddingEngine:
 
     def compute_embedding(self, audio_data):
         """Attempts fast hardware acceleration first, falls back to CPU if NaNs occur."""
-        # 1. Attempt using primary session
         primary_session = self.model_manager.get_primary_session()
         embedding = self.run_inference_on_session(primary_session, audio_data)
         
-        # 2. Fall back to lazy CPU session if NaNs are detected
         if embedding is None:
             print("  [Warning] NaN detected during primary inference. Falling back to CPU...")
             cpu_session = self.model_manager.get_cpu_session()
