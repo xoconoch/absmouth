@@ -41,8 +41,8 @@ API_URL="http://localhost:8100/tracks"
 # ONNX Model Path (defaults to 'data/muq_v0.0.1.onnx')
 MODEL_PATH="data/muq_v0.0.1.onnx"
 
-# Hardware Acceleration / Execution Providers
-PRIMARY_PROVIDER="OpenVINOExecutionProvider"
+# Hardware Acceleration / Execution Providers (defaults to CPUExecutionProvider)
+PRIMARY_PROVIDER="CPUExecutionProvider"
 CPU_PROVIDER="CPUExecutionProvider"
 CPU_FALLBACK_TTL=300
 ```
