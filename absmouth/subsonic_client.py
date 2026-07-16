@@ -107,6 +107,18 @@ def main():
                 
                 print(f"  ({s_idx}/{len(songs_to_process)}) Processing track '{title}' (ID: {track_id})")
                 
+                if not Config.FORCE_REPROCESS_ALL:
+                    try:
+                        print("    Checking if track already processed on backend...")
+                        check_response = abspitch.check_track(track_id)
+                        if check_response.status_code == 200:
+                            print(f"    [Already Synced] Track '{title}' already processed on backend. Updating local checkpoint.")
+                            checkpoint.mark_completed(track_id)
+                            completed_ids.add(track_id)
+                            continue
+                    except Exception as e:
+                        print(f"    Warning: Failed to check track status on backend: {e}")
+                
                 temp_file_path = os.path.join(temp_dir, f"track_{track_id}.tmp")
                 
                 try:

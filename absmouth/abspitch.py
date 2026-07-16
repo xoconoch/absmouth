@@ -21,3 +21,12 @@ class AbsolutePitchClient:
         
         response = requests.post(self.api_url, json=payload)
         return response
+
+    def check_track(self, subsonic_id):
+        """
+        Queries the Absolute Pitch backend to check if a track has already been processed.
+        Returns the HTTP response.
+        """
+        url = f"{self.api_url.rstrip('/')}/{subsonic_id}"
+        return requests.get(url)
+
