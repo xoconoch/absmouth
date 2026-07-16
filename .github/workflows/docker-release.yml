@@ -18,6 +18,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -56,5 +59,18 @@ jobs:
           tags: |
             ${{ env.IMAGE_BASE }}:openvino
             ${{ env.IMAGE_BASE }}:openvino-${{ env.VERSION }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push RKNPU image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: Dockerfile.rknpu
+          platforms: linux/arm64
+          push: true
+          tags: |
+            ${{ env.IMAGE_BASE }}:rknpu
+            ${{ env.IMAGE_BASE }}:rknpu-${{ env.VERSION }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

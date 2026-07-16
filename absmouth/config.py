@@ -63,6 +63,9 @@ class Config:
                 "precision": "FP32",
                 "cache_dir": "data/ov_cache"
             }
+        elif cls.PRIMARY_PROVIDER == "RKNPUExecutionProvider":
+            # RKNPU provider options are device/hardware-specific and typically default to empty
+            return {}
         return {}
 
     @classmethod

@@ -81,6 +81,17 @@ docker run --rm \
   ghcr.io/xoconoch/absmouth:openvino
 ```
 
+### Rockchip NPU (RKNPU) Accelerated Image
+Run the container by sharing the host NPU device node (typically `/dev/rknpu` or `/dev/dri`):
+```bash
+docker run --rm \
+  --network="host" \
+  --env-file .env \
+  --device /dev/rknpu \
+  -v ./data:/app/data \
+  ghcr.io/xoconoch/absmouth:rknpu
+```
+
 ### Override Execution Settings
 You can override configuration settings on-the-fly using environment variables via the `-e` flag in your `docker run` command:
 * **Force Refetch Tracklist**: Force re-indexing metadata from Subsonic instead of using `checkpoint.json`.

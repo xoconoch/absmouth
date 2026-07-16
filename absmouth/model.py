@@ -79,10 +79,19 @@ class ModelSessionManager:
             
             print(f"Initializing primary ONNX session ({provider})...")
             try:
+                providers = [provider]
+                provider_options = [options] if options else [{}]
+                
+                # Append CPUExecutionProvider fallback for hardware acceleration EPs to prevent initialization failures
+                # when specific operators are unsupported by the target hardware backend.
+                if provider != "CPUExecutionProvider":
+                    providers.append("CPUExecutionProvider")
+                    provider_options.append({})
+                
                 self.primary_session = ort.InferenceSession(
                     self.model_path,
-                    providers=[provider],
-                    provider_options=[options] if options else None
+                    providers=providers,
+                    provider_options=provider_options
                 )
                 print("Primary ONNX session loaded successfully.")
             except Exception as e:
@@ -99,10 +108,17 @@ class ModelSessionManager:
             
             print(f"Lazy-initializing fallback CPU ONNX session ({provider})...")
             try:
+                providers = [provider]
+                provider_options = [options] if options else [{}]
+                
+                if provider != "CPUExecutionProvider":
+                    providers.append("CPUExecutionProvider")
+                    provider_options.append({})
+                
                 self.cpu_session = ort.InferenceSession(
                     self.model_path,
-                    providers=[provider],
-                    provider_options=[options] if options else None
+                    providers=providers,
+                    provider_options=provider_options
                 )
                 print("Fallback CPU session loaded successfully.")
             except Exception as e:

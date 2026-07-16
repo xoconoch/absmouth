@@ -1,0 +1,55 @@
+# Use an official Python image
+FROM python:3.13-slim
+
+# Prevent Python from buffering stdout/stderr
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    LD_LIBRARY_PATH="/usr/lib:/usr/local/lib:${LD_LIBRARY_PATH}"
+
+WORKDIR /app
+
+# Install system dependencies (ffmpeg and libsndfile1 for audio decoding)
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    ffmpeg \
+    libsndfile1 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Add RKNPU user-space library (librknnrt.so) directly
+ARG RKNN_TOOLKIT_VERSION="v2.3.0"
+ADD --chmod=644 --checksum=sha256:73993ed4b440460825f21611731564503cc1d5a0c123746477da6cd574f34885 "https://github.com/airockchip/rknn-toolkit2/raw/refs/tags/${RKNN_TOOLKIT_VERSION}/rknpu2/runtime/Linux/librknn_api/aarch64/librknnrt.so" /usr/lib/librknnrt.so
+
+# Install python dependencies matching the template
+RUN pip install --no-cache-dir \
+    numpy \
+    protobuf \
+    packaging \
+    flatbuffers
+
+# Note: The standard onnxruntime package from PyPI does not bundle the RKNPU EP.
+# In a real Rockchip environment, you should replace this step by installing your own
+# custom-built onnxruntime wheel that has RKNPU EP compiled.
+RUN pip install --no-cache-dir onnxruntime
+
+RUN pip install \
+    --index-url https://download.pytorch.org/whl/cpu \
+    torch \
+    torchaudio \
+    torchcodec
+
+RUN pip install --no-cache-dir \
+    numpy \
+    einops \
+    transformers \
+    onnx \
+    onnxscript \
+    requests \
+    librosa
+
+# Copy Python package files and install
+COPY pyproject.toml README.md ./
+COPY absmouth/ ./absmouth/
+
+RUN pip install --no-cache-dir .
+
+ENTRYPOINT ["absmouth"]
