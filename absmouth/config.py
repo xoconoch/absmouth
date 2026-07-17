@@ -32,7 +32,7 @@ class Config:
     MODEL_PATH = os.environ.get("MODEL_PATH", "data/muq_v0.0.1.onnx")
     MODEL_DOWNLOAD_URL = os.environ.get("MODEL_DOWNLOAD_URL", "https://github.com/xoconoch/muq_onnx/releases/download/v0.0.1/muq_v0.0.1.onnx")
     
-    PRIMARY_PROVIDER = os.environ.get("PRIMARY_PROVIDER", "OpenVINOExecutionProvider")
+    PRIMARY_PROVIDER = os.environ.get("PRIMARY_PROVIDER", "CPUExecutionProvider")
     PRIMARY_PROVIDER_OPTIONS_RAW = os.environ.get("PRIMARY_PROVIDER_OPTIONS", "")
     
     CPU_PROVIDER = os.environ.get("CPU_PROVIDER", "CPUExecutionProvider")
