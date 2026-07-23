@@ -3,12 +3,11 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-    master.url = "github:NixOS/nixpkgs/master";
     flake-parts.url = "github:hercules-ci/flake-parts";
   };
 
   outputs =
-    inputs@{ flake-parts, ... }:
+    inputs@{ self, flake-parts, ... }:
     flake-parts.lib.mkFlake { inherit inputs; } {
       systems = [
         "x86_64-linux"
@@ -20,45 +19,46 @@
       perSystem =
         {
           config,
+          lib,
           pkgs,
           system,
           ...
         }:
-        let
-          # Instantiate master for this specific system
-          masterPkgs = import inputs.master { inherit system; };
-        in
         {
+          _module.args.pkgs = import self.inputs.nixpkgs {
+            inherit system;
+            config.allowUnfree = true;
+          };
           packages = { };
           devShells.default = pkgs.mkShell {
-            LD_LIBRARY_PATH = "${pkgs.lib.makeLibraryPath [
-              pkgs.stdenv.cc.cc.lib
-              pkgs.zlib
-            ]}";
+            LD_LIBRARY_PATH = "${pkgs.lib.makeLibraryPath (
+              with pkgs;
+              [
+                stdenv.cc.cc.lib
+                zlib
+                cudaPackages_13.cuda_cudart
+                cudaPackages_13.libcublas
+                cudaPackages_13.cudnn
+                cudaPackages_13.cuda_nvrtc
+                cudaPackages_13.libcufft
+                cudaPackages_13.libcurand
+                cudaPackages_13.cudatoolkit
+                linuxPackages.nvidiaPackages.stable
+              ]
+            )}";
 
             packages = with pkgs; [
-              (python3.withPackages (
-                ps: with ps; [
-                  librosa
-                  numpy
-                  scipy
-                  einops
-                  transformers
-                  openvino
-                  onnx
-                  # Pull directly from master's python packages, then override it
-                  (masterPkgs.python3Packages.onnxruntime.override {
-                    onnxruntime = masterPkgs.onnxruntime.override { openvinoSupport = true; };
-                  })
-                  onnxruntime
-                  onnxscript
-                  requests
-                  mutagen
-                ]
-              ))
               ruff
               stdenv.cc.cc.lib
               zlib
+              linuxPackages.nvidiaPackages.stable
+              cudaPackages_13.cuda_cudart
+              cudaPackages_13.libcublas
+              cudaPackages_13.cudnn
+              cudaPackages_13.cuda_nvrtc
+              cudaPackages_13.libcufft
+              cudaPackages_13.libcurand
+              cudaPackages_13.cudatoolkit
             ];
           };
         };

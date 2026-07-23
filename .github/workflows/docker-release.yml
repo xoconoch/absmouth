@@ -13,6 +13,9 @@ jobs:
     permissions:
       contents: read
       packages: write
+    strategy:
+      matrix:
+        device: [cpu, cuda, openvino]
 
     steps:
       - name: Checkout repository
@@ -31,34 +34,37 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Set Image Identifier
+      - name: Set Image Metadata
+        id: meta
         run: |
           OWNER=$(echo "${{ github.repository_owner }}" | tr '[A-Z]' '[a-z]')
-          echo "IMAGE_BASE=ghcr.io/${OWNER}/absmouth" >> $GITHUB_ENV
-          echo "VERSION=${{ github.event.release.tag_name }}" >> $GITHUB_ENV
+          IMAGE_BASE="ghcr.io/${OWNER}/absmouth"
+          RAW_TAG="${{ github.event.release.tag_name }}"
+          
+          if [[ "$RAW_TAG" =~ ^v ]]; then
+            V_VERSION="$RAW_TAG"
+          else
+            V_VERSION="v$RAW_TAG"
+          fi
+          
+          DEVICE="${{ matrix.device }}"
+          TAGS="${IMAGE_BASE}:${V_VERSION}-${DEVICE},${IMAGE_BASE}:${DEVICE},${IMAGE_BASE}:latest-${DEVICE}"
+          
+          if [ "$DEVICE" = "cpu" ]; then
+            TAGS="${TAGS},${IMAGE_BASE}:${V_VERSION},${IMAGE_BASE}:latest"
+          fi
+          
+          echo "tags=${TAGS}" >> $GITHUB_OUTPUT
 
-      - name: Build and push CPU image
+      - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
           context: .
           file: Dockerfile
-          platforms: linux/amd64,linux/arm64
+          build-args: |
+            DEVICE=${{ matrix.device }}
+          platforms: linux/amd64
           push: true
-          tags: |
-            ${{ env.IMAGE_BASE }}:latest
-            ${{ env.IMAGE_BASE }}:${{ env.VERSION }}
-            ${{ env.IMAGE_BASE }}:cpu
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Build and push OpenVINO image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: Dockerfile.openvino
-          push: true
-          tags: |
-            ${{ env.IMAGE_BASE }}:openvino
-            ${{ env.IMAGE_BASE }}:openvino-${{ env.VERSION }}
+          tags: ${{ steps.meta.outputs.tags }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

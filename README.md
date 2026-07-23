@@ -42,7 +42,9 @@ API_URL="http://localhost:8100/tracks"
 MODEL_PATH="data/muq_v0.0.1.onnx"
 
 # Hardware Acceleration / Execution Providers (defaults to CPUExecutionProvider)
-PRIMARY_PROVIDER="CPUExecutionProvider"
+# Options: CPUExecutionProvider, OpenVINOExecutionProvider, CUDAExecutionProvider
+PRIMARY_PROVIDER="CUDAExecutionProvider"
+PRIMARY_PROVIDER_OPTIONS='{"device_id": 0}'
 CPU_PROVIDER="CPUExecutionProvider"
 CPU_FALLBACK_TTL=300
 ```
@@ -70,6 +72,21 @@ docker run --rm \
   ghcr.io/xoconoch/absmouth:latest
 ```
 
+### CUDA Accelerated Image (NVIDIA GPU)
+Build and run the sync client with NVIDIA GPU acceleration by passing NVIDIA devices and mounting driver libraries:
+```bash
+docker run --rm \
+  --network="host" \
+  --env-file .env \
+  --device nvidia.com/gpu=all \
+  -v ./data:/app/data \
+  ghcr.io/xoconoch/absmouth:latest-cuda
+```
+Or build locally:
+```bash
+docker build -t absmouth:cuda -f Dockerfile.cuda .
+```
+
 ### OpenVINO Accelerated Image (Intel GPU)
 Run the sync client with Intel GPU hardware acceleration by sharing the `/dev/dri` device and mounting the unified `data` folder:
 ```bash
@@ -78,7 +95,7 @@ docker run --rm \
   --env-file .env \
   --device /dev/dri \
   -v ./data:/app/data \
-  ghcr.io/xoconoch/absmouth:openvino
+  ghcr.io/xoconoch/absmouth:latest-openvino
 ```
 
 ### Override Execution Settings

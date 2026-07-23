@@ -63,6 +63,10 @@ class Config:
                 "precision": "FP32",
                 "cache_dir": "data/ov_cache"
             }
+        elif cls.PRIMARY_PROVIDER == "CUDAExecutionProvider":
+            return {
+                "device_id": 0,
+            }
         return {}
 
     @classmethod
