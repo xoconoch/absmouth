@@ -73,7 +73,7 @@ docker run --rm \
 ```
 
 ### CUDA Accelerated Image (NVIDIA GPU)
-Build and run the sync client with NVIDIA GPU acceleration by passing NVIDIA devices and mounting driver libraries:
+Build and run the sync client with NVIDIA GPU acceleration by passing NVIDIA devices
 ```bash
 docker run --rm \
   --network="host" \
@@ -88,7 +88,7 @@ docker build -t absmouth:cuda -f Dockerfile.cuda .
 ```
 
 ### OpenVINO Accelerated Image (Intel GPU)
-Run the sync client with Intel GPU hardware acceleration by sharing the `/dev/dri` device and mounting the unified `data` folder:
+Run the sync client with Intel GPU hardware acceleration by sharing the `/dev/dri` device
 ```bash
 docker run --rm \
   --network="host" \
