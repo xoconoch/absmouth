@@ -12,7 +12,8 @@ license = { text = "MIT" }
 dependencies = [
     "requests",
     "numpy",
-    "librosa",
+    "soundfile",
+    "soxr",
     "onnxruntime",
 ]
 

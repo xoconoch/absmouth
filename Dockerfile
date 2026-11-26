@@ -1,108 +1,150 @@
 ARG DEVICE=cpu
 
 # ==============================================================================
-# Production Device Base Stages
+# Python dependency builders (wheels only, matching runtime Python ABI)
 # ==============================================================================
-
-# CPU Base
-FROM python:3.13-slim AS prod-cpu
-ENV DEVICE=cpu
-
-# OpenVINO (Intel GPU) Base
-FROM python:3.13-slim AS prod-openvino
-ENV DEVICE=openvino \
-    OV_FRONTEND_CACHE_ENABLE=1
-
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-    clinfo \
-    ocl-icd-libopencl1 \
-    wget && \
-    wget -nv https://github.com/intel/intel-graphics-compiler/releases/download/v2.36.3/intel-igc-core-2_2.36.3+21719_amd64.deb && \
-    wget -nv https://github.com/intel/intel-graphics-compiler/releases/download/v2.36.3/intel-igc-opencl-2_2.36.3+21719_amd64.deb && \
-    wget -nv https://github.com/intel/compute-runtime/releases/download/26.22.38646.4/intel-opencl-icd_26.22.38646.4-0_amd64.deb && \
-    wget -nv https://github.com/intel/intel-graphics-compiler/releases/download/igc-1.0.17537.24/intel-igc-core_1.0.17537.24_amd64.deb && \
-    wget -nv https://github.com/intel/intel-graphics-compiler/releases/download/igc-1.0.17537.24/intel-igc-opencl_1.0.17537.24_amd64.deb && \
-    wget -nv https://github.com/intel/compute-runtime/releases/download/24.35.30872.36/intel-opencl-icd-legacy1_24.35.30872.36_amd64.deb && \
-    wget -nv https://github.com/intel/compute-runtime/releases/download/26.22.38646.4/libigdgmm12_22.10.0_amd64.deb && \
-    apt-get install -y --no-install-recommends ./*.deb && \
-    rm *.deb && \
-    apt-get remove -yqq wget && \
-    apt-get autoremove -yqq && \
-    rm -rf /var/lib/apt/lists/*
-
-# CUDA (NVIDIA GPU) Base
-FROM nvidia/cuda:13.0.0-runtime-ubuntu24.04 AS prod-cuda
-ENV DEVICE=cuda \
-    NVIDIA_VISIBLE_DEVICES=all \
-    NVIDIA_DRIVER_CAPABILITIES=compute,utility \
-    LD_LIBRARY_PATH=/usr/local/nvidia/lib64:${LD_LIBRARY_PATH}
-
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-    libcudnn9-cuda-13 && \
-    rm -rf /var/lib/apt/lists/*
-
-
-# ==============================================================================
-# Final Runtime Stage
-# ==============================================================================
-FROM prod-${DEVICE} AS final
-
+FROM python:3.13-slim AS pydeps-py313
 ARG DEVICE=cpu
+ENV PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+# Only packages the client actually imports are installed. --no-deps keeps the
+# heavy transitive stacks (torch, transformers, numba, scipy...) out entirely.
+RUN case "$DEVICE" in \
+        openvino) ORT=onnxruntime-openvino==1.24.1 ;; \
+        *) ORT=onnxruntime==1.24.4 ;; \
+    esac && \
+    pip install --no-compile --no-deps --prefix=/install \
+        numpy \
+        requests \
+        urllib3 \
+        certifi \
+        idna \
+        charset-normalizer \
+        soundfile \
+        typing_extensions \
+        soxr \
+        cffi \
+        pycparser \
+        "$ORT" && \
+    rm -rf \
+        /install/lib/python3.13/site-packages/*/tests \
+        /install/lib/python3.13/site-packages/numpy/f2py \
+        /install/lib/python3.13/site-packages/numpy/tests \
+        /install/lib/python3.13/site-packages/onnxruntime/tools \
+        /install/lib/python3.13/site-packages/onnxruntime/transformers \
+        /install/lib/python3.13/site-packages/onnxruntime/quantization \
+        /install/lib/python3.13/site-packages/onnxruntime/datasets && \
+    if [ "$DEVICE" = "openvino" ]; then \
+        rm -rf \
+            /install/lib/python3.13/site-packages/onnxruntime/capi/libopenvino_intel_npu_plugin.so*; \
+    fi && \
+    find /install -type d -name '__pycache__' -prune -exec rm -rf {} + 2>/dev/null || true
+
+FROM python:3.12-slim AS pydeps-py312
+ENV PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+RUN pip install --no-compile --no-deps --prefix=/install \
+        numpy \
+        requests \
+        urllib3 \
+        certifi \
+        idna \
+        charset-normalizer \
+        soundfile \
+        typing_extensions \
+        soxr \
+        cffi \
+        pycparser \
+        onnxruntime-gpu==1.32.0 && \
+    rm -rf \
+        /install/lib/python3.12/site-packages/*/tests \
+        /install/lib/python3.12/site-packages/numpy/f2py \
+        /install/lib/python3.12/site-packages/numpy/tests \
+        /install/lib/python3.12/site-packages/onnxruntime/tools \
+        /install/lib/python3.12/site-packages/onnxruntime/transformers \
+        /install/lib/python3.12/site-packages/onnxruntime/quantization \
+        /install/lib/python3.12/site-packages/onnxruntime/datasets && \
+    find /install -type d -name '__pycache__' -prune -exec rm -rf {} + 2>/dev/null || true
+
+# ==============================================================================
+# CPU runtime (distroless: no shell, apt, pip or compilers)
+# ==============================================================================
+FROM gcr.io/distroless/python3-debian13:latest AS final-cpu
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    PATH="/opt/venv/bin:$PATH"
+    PYTHONPATH=/app:/opt/py
+WORKDIR /app
+COPY --from=pydeps-py313 /install/lib/python3.13/site-packages /opt/py
+COPY absmouth /app/absmouth
+ENTRYPOINT ["python3", "-m", "absmouth.subsonic_client"]
 
+# ==============================================================================
+# OpenVINO runtime (Intel GPU / OpenCL)
+# ==============================================================================
+FROM ubuntu:24.04 AS ovdeps
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends --download-only intel-opencl-icd && \
+    mkdir -p /ov && \
+    for deb in /var/cache/apt/archives/*.deb; do dpkg-deb -x "$deb" /ov; done && \
+    sed -i 's#/usr/lib/x86_64-linux-gnu/intel-opencl/libigdrcl.so#/opt/ov/lib/intel-opencl/libigdrcl.so#' \
+        /ov/etc/OpenCL/vendors/intel.icd && \
+    rm -f /ov/usr/lib/x86_64-linux-gnu/libicu*.so*
+
+FROM gcr.io/distroless/python3-debian13:latest AS final-openvino
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONPATH=/app:/opt/py \
+    LD_LIBRARY_PATH=/opt/ov/lib:/opt/ov/lib/intel-opencl
+WORKDIR /app
+COPY --from=ovdeps /ov/usr/lib/x86_64-linux-gnu /opt/ov/lib
+COPY --from=ovdeps /ov/etc/OpenCL /etc/OpenCL
+COPY --from=pydeps-py313 /install/lib/python3.13/site-packages /opt/py
+COPY absmouth /app/absmouth
+ENTRYPOINT ["python3", "-m", "absmouth.subsonic_client"]
+
+# ==============================================================================
+# CUDA runtime
+# ==============================================================================
+FROM ubuntu:24.04 AS final-cuda
+ENV DEBIAN_FRONTEND=noninteractive \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONPATH=/app:/opt/py \
+    NVIDIA_VISIBLE_DEVICES=all \
+    NVIDIA_DRIVER_CAPABILITIES=compute,utility \
+    LD_LIBRARY_PATH=/usr/local/nvidia/lib64:/usr/local/cuda/lib64
 WORKDIR /app
 
-# Install Python 3, venv, and audio decoding system packages
 RUN apt-get update && \
+    apt-get install -y --no-install-recommends ca-certificates wget && \
+    wget -q https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/cuda-keyring_1.1-1_all.deb -O /tmp/cuda-keyring.deb && \
+    dpkg -i /tmp/cuda-keyring.deb && \
+    rm -f /tmp/cuda-keyring.deb && \
+    apt-get update && \
     apt-get install -y --no-install-recommends \
-    python3 \
-    python3-pip \
-    python3-venv \
-    ffmpeg \
-    libsndfile1 && \
-    rm -rf /var/lib/apt/lists/*
+        python3 \
+        cuda-cudart-13-0 \
+        libcublas-13-0 \
+        libcurand-13-0 \
+        libcudnn9-cuda-13=9.18.0.77-1 && \
+    apt-get purge -y wget && \
+    apt-get autoremove -y && \
+    rm -rf \
+        /var/lib/apt/lists/* \
+        /var/cache/apt/* \
+        /usr/share/doc/* \
+        /usr/share/man/* \
+        /usr/lib/python3/dist-packages/* \
+        /usr/local/cuda-13.0/compat \
+        /usr/lib/x86_64-linux-gnu/libcudnn_adv.so* \
+        /usr/lib/x86_64-linux-gnu/libcudnn_ext.so*
 
-RUN python3 -m venv /opt/venv
+COPY --from=pydeps-py312 /install/lib/python3.12/site-packages /opt/py
+COPY absmouth /app/absmouth
+ENTRYPOINT ["python3", "-m", "absmouth.subsonic_client"]
 
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir \
-    numpy \
-    protobuf \
-    packaging \
-    flatbuffers
-
-# Install PyTorch CPU wheels
-RUN pip install \
-    --index-url https://download.pytorch.org/whl/cpu \
-    torch \
-    torchaudio \
-    torchcodec
-
-# Install machine learning & audio processing dependencies
-RUN pip install --no-cache-dir \
-    numpy \
-    einops \
-    transformers \
-    onnx \
-    onnxscript \
-    requests \
-    librosa
-
-# Install ONNX Runtime variant corresponding to target DEVICE
-RUN if [ "$DEVICE" = "cuda" ]; then \
-        pip install --no-cache-dir --no-deps onnxruntime-gpu; \
-    else \
-        pip install --no-cache-dir --no-deps onnxruntime; \
-    fi
-
-COPY pyproject.toml README.md ./
-COPY absmouth/ ./absmouth/
-
-# Use --no-deps so pyproject.toml's CPU 'onnxruntime' requirement does not overwrite onnxruntime-gpu
-RUN pip install --no-cache-dir --no-deps .
-
-ENTRYPOINT ["absmouth"]
+# ==============================================================================
+# Selected runtime
+# ==============================================================================
+FROM final-${DEVICE} AS final

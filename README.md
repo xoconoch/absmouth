@@ -84,7 +84,7 @@ docker run --rm \
 ```
 Or build locally:
 ```bash
-docker build -t absmouth:cuda -f Dockerfile.cuda .
+docker build -t absmouth:cuda --build-arg DEVICE=cuda .
 ```
 
 ### OpenVINO Accelerated Image (Intel GPU)
@@ -97,6 +97,17 @@ docker run --rm \
   -v ./data:/app/data \
   ghcr.io/xoconoch/absmouth:latest-openvino
 ```
+Or build it locally:
+```bash
+docker build -t absmouth:openvino --build-arg DEVICE=openvino .
+```
+
+### Minimal Images
+All images are built from a single multi-stage `Dockerfile` and contain only the
+packages the client imports (`numpy`, `onnxruntime`, `soundfile`, `soxr` and
+`requests`). Audio is decoded with the bundled libsndfile; `ffmpeg` is not
+included. If you need to ingest a format libsndfile cannot decode (e.g. AAC/M4A),
+either transcode it in Subsonic or build with `ffmpeg` installed.
 
 ### Server Reconciliation
 On startup (unless `FORCE_REPROCESS_ALL` is set), the client fetches the list of

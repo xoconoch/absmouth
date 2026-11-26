@@ -1,7 +1,11 @@
+import os
 import time
 import hashlib
+import shutil
+import subprocess
 import numpy as np
-import librosa
+import soundfile as sf
+import soxr
 import onnxruntime as ort
 
 class ModelSessionManager:
@@ -133,11 +137,47 @@ class EmbeddingEngine:
         self.model_manager = model_manager
         self.chunk_cache = chunk_cache
 
+    @staticmethod
+    def _decode_with_ffmpeg(file_path, target_sr):
+        """Fallback decoder for formats libsndfile cannot read (e.g. AAC/M4A)."""
+        ffmpeg = shutil.which("ffmpeg")
+        if not ffmpeg:
+            raise RuntimeError(
+                f"Unsupported audio format for {file_path!r} and ffmpeg is not installed."
+            )
+        proc = subprocess.run(
+            [
+                ffmpeg, "-v", "error", "-i", file_path,
+                "-f", "f32le", "-ac", "1", "-ar", str(target_sr), "-",
+            ],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+        if proc.returncode != 0:
+            raise RuntimeError(
+                f"ffmpeg failed to decode {file_path!r}: "
+                f"{proc.stderr.decode('utf-8', 'replace').strip()}"
+            )
+        wav = np.frombuffer(proc.stdout, dtype=np.float32).reshape(-1, 1)
+        return wav, target_sr
+
     def load_and_preprocess_audio(self, file_path):
         """Loads and converts the file to the target samplerate and tensor format."""
-        wav, sr = librosa.load(file_path, sr=self.config.TARGET_SAMPLE_RATE)
-        wav = np.expand_dims(wav, axis=0).astype(np.float32)
-        return wav
+        target_sr = self.config.TARGET_SAMPLE_RATE
+        try:
+            wav, sr = sf.read(file_path, dtype="float32", always_2d=True)
+        except Exception:
+            wav, sr = self._decode_with_ffmpeg(file_path, target_sr)
+
+        if wav.shape[1] > 1:
+            wav = wav.mean(axis=1)
+        else:
+            wav = wav[:, 0]
+
+        if sr != target_sr:
+            wav = soxr.resample(wav, sr, target_sr, quality="HQ")
+
+        return np.expand_dims(np.asarray(wav, dtype=np.float32), axis=0)
 
     def run_inference_on_session(self, session, audio_data):
         """
