@@ -98,6 +98,14 @@ docker run --rm \
   ghcr.io/xoconoch/absmouth:latest-openvino
 ```
 
+### Server Reconciliation
+On startup (unless `FORCE_REPROCESS_ALL` is set), the client fetches the list of
+tracks already stored on the Absolute Pitch backend and merges it into
+`checkpoint.json`. This means a fresh or deleted checkpoint still skips tracks
+the server already has, instead of downloading and re-embedding them. If the
+backend list endpoint is unavailable, the client falls back to checking each
+track individually.
+
 ### Override Execution Settings
 You can override configuration settings on-the-fly using environment variables via the `-e` flag in your `docker run` command:
 * **Force Refetch Tracklist**: Force re-indexing metadata from Subsonic instead of using `checkpoint.json`.

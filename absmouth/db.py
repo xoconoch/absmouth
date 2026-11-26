@@ -49,6 +49,18 @@ class CheckpointManager:
             self.data["completed_ids"].append(track_id)
             self.save()
 
+    def mark_completed_many(self, track_ids):
+        existing = set(self.data["completed_ids"])
+        new_ids = []
+        for track_id in track_ids:
+            if track_id not in existing:
+                existing.add(track_id)
+                new_ids.append(track_id)
+        if new_ids:
+            self.data["completed_ids"].extend(new_ids)
+            self.save()
+        return new_ids
+
 class ChunkCache:
     """Persistent database mapping chunk hashes to precomputed float embeddings."""
     def __init__(self, db_path):

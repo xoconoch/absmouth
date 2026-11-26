@@ -28,6 +28,7 @@ class Config:
     SUBSONIC_CLIENT_NAME = os.environ.get("SUBSONIC_CLIENT_NAME", "AbsolutePitchClient")
 
     API_URL = os.environ.get("API_URL", "http://localhost:8100/tracks")
+    API_REQUEST_TIMEOUT = int(os.environ.get("API_REQUEST_TIMEOUT", "30"))
 
     MODEL_PATH = os.environ.get("MODEL_PATH", "data/muq_v0.0.1.onnx")
     MODEL_DOWNLOAD_URL = os.environ.get("MODEL_DOWNLOAD_URL", "https://github.com/xoconoch/muq_onnx/releases/download/v0.0.1/muq_v0.0.1.onnx")

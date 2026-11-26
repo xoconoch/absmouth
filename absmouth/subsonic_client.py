@@ -53,6 +53,23 @@ def main():
     if Config.FORCE_REPROCESS_ALL:
         print("FORCE_REPROCESS_ALL is active. Reprocessing all files.")
         completed_ids.clear()
+    else:
+        print("Reconciling local checkpoint with tracks already processed on backend...")
+        try:
+            server_ids = abspitch.get_processed_track_ids()
+            new_ids = server_ids - completed_ids
+            if new_ids:
+                checkpoint.mark_completed_many(new_ids)
+                completed_ids |= new_ids
+            print(
+                f"Server reports {len(server_ids)} processed tracks "
+                f"({len(new_ids)} added to local checkpoint)."
+            )
+        except Exception as e:
+            print(
+                f"Warning: Failed to fetch processed tracks from backend: {e}. "
+                "Falling back to per-track checks."
+            )
 
     print(f"Already completed tracks: {len(completed_ids)}")
 
