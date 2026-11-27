@@ -30,8 +30,13 @@ class Config:
     API_URL = os.environ.get("API_URL", "http://localhost:8100/tracks")
     API_REQUEST_TIMEOUT = int(os.environ.get("API_REQUEST_TIMEOUT", "30"))
 
-    MODEL_PATH = os.environ.get("MODEL_PATH", "data/muq_v0.0.1.onnx")
-    MODEL_DOWNLOAD_URL = os.environ.get("MODEL_DOWNLOAD_URL", "https://github.com/xoconoch/muq_onnx/releases/download/v0.0.1/muq_v0.0.1.onnx")
+    MODEL_PATH = os.environ.get("MODEL_PATH", "data/muq_v0.2.0.onnx")
+    MODEL_DOWNLOAD_URL = os.environ.get("MODEL_DOWNLOAD_URL", "https://github.com/xoconoch/muq_onnx/releases/download/v0.2.0/muq_v0.2.0.onnx")
+    # Hidden-state index to use. 0 is MuQ's conv feature output, which is the
+    # best layer for centered cosine similarity; 12 is the final layer.
+    MODEL_LAYER = int(os.environ.get("MODEL_LAYER", "0"))
+    # Bump this to invalidate the chunk cache after changing pooling choices.
+    CACHE_TAG = os.environ.get("CACHE_TAG", "")
     
     PRIMARY_PROVIDER = os.environ.get("PRIMARY_PROVIDER", "CPUExecutionProvider")
     PRIMARY_PROVIDER_OPTIONS_RAW = os.environ.get("PRIMARY_PROVIDER_OPTIONS", "")
@@ -48,7 +53,12 @@ class Config:
     FORCE_REPROCESS_ALL = os.environ.get("FORCE_REPROCESS_ALL", "false").lower() in ("true", "1", "yes")
 
     TARGET_SAMPLE_RATE = int(os.environ.get("TARGET_SAMPLE_RATE", "24000"))
-    CHUNK_DURATION = int(os.environ.get("CHUNK_DURATION", "10"))
+    # MuQ v0.2.0 is exported with a static 30s input window.
+    CHUNK_DURATION = int(os.environ.get("CHUNK_DURATION", "30"))
+    # "uniform" or "energy" (weight chunks by their RMS).
+    CHUNK_WEIGHTING = os.environ.get("CHUNK_WEIGHTING", "uniform").lower()
+    # Chunks quieter than this RMS are ignored when other chunks exist.
+    MIN_CHUNK_RMS = float(os.environ.get("MIN_CHUNK_RMS", "0.001"))
 
     @classmethod
     def get_primary_provider_options(cls):
@@ -92,4 +102,16 @@ class Config:
         if missing:
             print(f"Error: Missing required environment variables: {', '.join(missing)}")
             print("Please set them in your environment or write them to a .env file.")
+            sys.exit(1)
+        if cls.CHUNK_DURATION < 1:
+            print("Error: CHUNK_DURATION must be at least 1 second.")
+            sys.exit(1)
+        if cls.MODEL_LAYER < 0:
+            print("Error: MODEL_LAYER must be zero or greater.")
+            sys.exit(1)
+        if cls.CHUNK_WEIGHTING not in ("uniform", "energy"):
+            print("Error: CHUNK_WEIGHTING must be 'uniform' or 'energy'.")
+            sys.exit(1)
+        if cls.MIN_CHUNK_RMS < 0:
+            print("Error: MIN_CHUNK_RMS must be zero or greater.")
             sys.exit(1)

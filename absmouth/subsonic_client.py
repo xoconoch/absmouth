@@ -18,6 +18,11 @@ def main():
     print(f"Connecting to Subsonic: {Config.SUBSONIC_URL}")
     print(f"API Target: {Config.API_URL}")
     print(f"Model Path: {Config.MODEL_PATH}")
+    print(
+        f"Model Layer: {Config.MODEL_LAYER} | "
+        f"Chunk: {Config.CHUNK_DURATION}s | "
+        f"Weighting: {Config.CHUNK_WEIGHTING}"
+    )
     print(f"Primary Acceleration: {Config.PRIMARY_PROVIDER}")
     print(f"CPU Fallback: {Config.CPU_PROVIDER} (TTL: {Config.CPU_FALLBACK_TTL}s)")
     print(f"Chunk Cache: {Config.CHUNK_CACHE_DB}")

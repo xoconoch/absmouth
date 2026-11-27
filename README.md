@@ -2,7 +2,7 @@
 
 `absmouth` is an [abspitch](https://github.com/xoconoch/abspitch) client that
 recursively crawls a Subsonic/OpenSubsonic server library, processes audio
-tracks in 10-second chunks, generates 1024-dimensional acoustic embeddings, and
+tracks in 30-second chunks, generates 1024-dimensional acoustic embeddings, and
 pushes them to the API.
 
 ---
@@ -11,17 +11,24 @@ pushes them to the API.
 
 The only supported way to run `absmouth` is via **Docker**.
 
-This tool requires the `muq_v0.0.1.onnx` acoustic embedding model (~1.2 GB).
-Support for other models should be possible as long as they generate embeddings
-of the same dimension, but I am haven't explored that possibility.
+This tool requires the `muq_v0.2.0.onnx` acoustic embedding model (~1.2 GB).
+It was exported from `OpenMuQ/MuQ-large-msd-iter` with 30-second windows and all
+13 hidden states. Layer `0` is MuQ's convolutional feature output and is the
+best layer for centered cosine similarity; layer `12` is the final transformer
+layer. Other models work as long as they expose the same `input_audio` input and
+1024-dimensional `layer_<n>` outputs.
 
 ### Automatic or Manual Model Setup
 By default, **the client automatically downloads the model** if it is not detected at the configured path inside the mounted data volume.
 
 If you prefer to download it manually:
-* **ONNX Model URL:** https://github.com/xoconoch/muq_onnx/releases/download/v0.0.1/muq_v0.0.1.onnx
+* **ONNX Model URL:** https://github.com/xoconoch/muq_onnx/releases/download/v0.2.0/muq_v0.2.0.onnx
 
-Place the downloaded file (`muq_v0.0.1.onnx`) inside your host's `./data` directory (so that it is available inside the container as `data/muq_v0.0.1.onnx`).
+Place the downloaded file (`muq_v0.2.0.onnx`) inside your host's `./data` directory (so that it is available inside the container as `data/muq_v0.2.0.onnx`).
+
+Upgrading from the old 10-second model requires re-embedding the library. Run
+once with `FORCE_REPROCESS_ALL=true`; the chunk cache key includes the model
+path and layer, so old cache entries are not reused.
 
 ---
 
@@ -37,8 +44,22 @@ SUBSONIC_PASS=your_subsonic_password
 
 API_URL=http://localhost:8100/tracks
 
-# ONNX Model Path (defaults to 'data/muq_v0.0.1.onnx')
-MODEL_PATH=data/muq_v0.0.1.onnx
+# ONNX Model Path (defaults to 'data/muq_v0.2.0.onnx')
+MODEL_PATH=data/muq_v0.2.0.onnx
+
+# Hidden state to use. 0 is best for centered cosine; 12 is the final layer.
+MODEL_LAYER=0
+
+# Must match the exported model's static window (30s for muq_v0.2.0.onnx).
+CHUNK_DURATION=30
+
+# "uniform" or "energy" (weights chunks by RMS)
+CHUNK_WEIGHTING=uniform
+# Chunks below this RMS are ignored when other chunks exist.
+MIN_CHUNK_RMS=0.001
+
+# Bump to invalidate the chunk cache after changing pooling options.
+CACHE_TAG=
 
 # Hardware Acceleration / Execution Providers (defaults to CPUExecutionProvider)
 # Options: CPUExecutionProvider, OpenVINOExecutionProvider, CUDAExecutionProvider
@@ -58,7 +79,7 @@ Ensure your `./data` directory is prepared (it can be empty, in which case the c
 ```bash
 # Example local directory structure:
 # ./data/
-# └── (muq_v0.0.1.onnx will be downloaded here if not present)
+# └── (muq_v0.2.0.onnx will be downloaded here if not present)
 ```
 
 ### CPU-only Image
