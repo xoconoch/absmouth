@@ -31,21 +31,20 @@ Configure the application by creating a `.env` file in your working directory:
 
 ```env
 # Subsonic Connection Parameters
-SUBSONIC_URL="http://localhost:4533"
-SUBSONIC_USER="your_subsonic_username"
-SUBSONIC_PASS="your_subsonic_password"
+SUBSONIC_URL=http://localhost:4533
+SUBSONIC_USER=your_subsonic_username
+SUBSONIC_PASS=your_subsonic_password
 
-# Absolute Pitch Target API Endpoint
-API_URL="http://localhost:8100/tracks"
+API_URL=http://localhost:8100/tracks
 
 # ONNX Model Path (defaults to 'data/muq_v0.0.1.onnx')
-MODEL_PATH="data/muq_v0.0.1.onnx"
+MODEL_PATH=data/muq_v0.0.1.onnx
 
 # Hardware Acceleration / Execution Providers (defaults to CPUExecutionProvider)
 # Options: CPUExecutionProvider, OpenVINOExecutionProvider, CUDAExecutionProvider
-PRIMARY_PROVIDER="CUDAExecutionProvider"
-PRIMARY_PROVIDER_OPTIONS='{"device_id": 0}'
-CPU_PROVIDER="CPUExecutionProvider"
+PRIMARY_PROVIDER=CUDAExecutionProvider
+PRIMARY_PROVIDER_OPTIONS={"device_id": 0}
+CPU_PROVIDER=CPUExecutionProvider
 CPU_FALLBACK_TTL=300
 ```
 
