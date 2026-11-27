@@ -46,6 +46,8 @@ API_URL=http://localhost:8100/tracks
 
 # ONNX Model Path (defaults to 'data/muq_v0.2.0.onnx')
 MODEL_PATH=data/muq_v0.2.0.onnx
+# Optional integrity check for the downloaded model. Empty disables it.
+MODEL_SHA256=905540a6afc1383885c5a59870086f634c3060c4d9d757709e2ed73c926097b2
 
 # Hidden state to use. 0 is best for centered cosine; 12 is the final layer.
 MODEL_LAYER=0

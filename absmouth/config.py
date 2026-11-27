@@ -32,6 +32,8 @@ class Config:
 
     MODEL_PATH = os.environ.get("MODEL_PATH", "data/muq_v0.2.0.onnx")
     MODEL_DOWNLOAD_URL = os.environ.get("MODEL_DOWNLOAD_URL", "https://github.com/xoconoch/muq_onnx/releases/download/v0.2.0/muq_v0.2.0.onnx")
+    # SHA256 of muq_v0.2.0.onnx. Leave empty to disable verification.
+    MODEL_SHA256 = os.environ.get("MODEL_SHA256", "905540a6afc1383885c5a59870086f634c3060c4d9d757709e2ed73c926097b2")
     # Hidden-state index to use. 0 is MuQ's conv feature output, which is the
     # best layer for centered cosine similarity; 12 is the final layer.
     MODEL_LAYER = int(os.environ.get("MODEL_LAYER", "0"))

@@ -46,12 +46,14 @@ class ModelSessionManager:
                 downloaded = 0
                 block_size = 65536
                 last_percentage = -1
+                hasher = hashlib.sha256()
                 
                 while True:
                     buffer = response.read(block_size)
                     if not buffer:
                         break
                     downloaded += len(buffer)
+                    hasher.update(buffer)
                     out_file.write(buffer)
                     
                     if file_size:
@@ -63,8 +65,18 @@ class ModelSessionManager:
                     else:
                         if downloaded % (1024 * 1024 * 5) == 0:
                             print(f"Downloaded {downloaded / (1024*1024):.1f} MB...", end="\r", flush=True)
-                print()  
-                
+                print()
+
+            expected_sha = getattr(self.config, "MODEL_SHA256", "").strip().lower()
+            if expected_sha:
+                actual_sha = hasher.hexdigest()
+                if actual_sha != expected_sha:
+                    raise RuntimeError(
+                        f"SHA256 mismatch: expected {expected_sha}, got {actual_sha}. "
+                        "Delete the file and retry, or update MODEL_SHA256."
+                    )
+                print("Model SHA256 verified.")
+
             os.replace(temp_target_path, self.model_path)
             print(f"Model downloaded successfully and saved to {self.model_path}")
         except Exception as e:
