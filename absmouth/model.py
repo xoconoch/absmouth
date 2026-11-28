@@ -18,12 +18,33 @@ class ModelSessionManager:
         self.cpu_last_used = 0.0
         self._ensure_model_exists()
 
+    @staticmethod
+    def _sha256_file(path):
+        hasher = hashlib.sha256()
+        with open(path, "rb") as f:
+            for block in iter(lambda: f.read(1024 * 1024), b""):
+                hasher.update(block)
+        return hasher.hexdigest()
+
     def _ensure_model_exists(self):
-        import os
         import urllib.request
 
+        expected_sha = getattr(self.config, "MODEL_SHA256", "").strip().lower()
         if os.path.exists(self.model_path):
-            return
+            if not expected_sha:
+                return
+            actual_sha = self._sha256_file(self.model_path)
+            if actual_sha == expected_sha:
+                return
+            print(
+                f"WARNING: {self.model_path} does not match MODEL_SHA256 "
+                f"(got {actual_sha}, expected {expected_sha}). Re-downloading..."
+            )
+            bad_path = self.model_path + ".bad"
+            try:
+                os.replace(self.model_path, bad_path)
+            except OSError:
+                os.remove(self.model_path)
 
         url = self.config.MODEL_DOWNLOAD_URL
         print(f"Model not found at {self.model_path}. Automatically downloading from {url}...")
@@ -78,6 +99,12 @@ class ModelSessionManager:
                 print("Model SHA256 verified.")
 
             os.replace(temp_target_path, self.model_path)
+            bad_path = self.model_path + ".bad"
+            if os.path.exists(bad_path):
+                try:
+                    os.remove(bad_path)
+                except OSError:
+                    pass
             print(f"Model downloaded successfully and saved to {self.model_path}")
         except Exception as e:
             if os.path.exists(temp_target_path):

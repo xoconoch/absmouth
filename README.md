@@ -26,6 +26,10 @@ If you prefer to download it manually:
 
 Place the downloaded file (`muq_v0.2.0.onnx`) inside your host's `./data` directory (so that it is available inside the container as `data/muq_v0.2.0.onnx`).
 
+Existing model files are checked against `MODEL_SHA256` on startup. If the file
+is missing or does not match (for example, an old 10-second model saved under the
+new name), the client moves it aside and downloads the correct model.
+
 Upgrading from the old 10-second model requires re-embedding the library. Run
 once with `FORCE_REPROCESS_ALL=true`; the chunk cache key includes the model
 path and layer, so old cache entries are not reused.

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "absmouth"
-version = "0.1.0"
+version = "0.2.0"
 description = "Absolute Pitch Subsonic Sync Client"
 readme = "README.md"
 requires-python = ">=3.8"
